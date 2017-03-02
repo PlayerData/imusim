@@ -17,63 +17,41 @@
 # You should have received a copy of the GNU General Public License
 # along with IMUSim.  If not, see <http://www.gnu.org/licenses/>.
 
-depsOK = True
+from setuptools import setup, find_packages
+from setuptools.extension import Extension
+from setuptools.command.build_ext import build_ext as _build_ext
 
-try:
-    import numpy
-except ImportError:
-    depsOK = False
-    print "NumPy should be installed first from suitable binaries."
-    print "See http://numpy.scipy.org/"
+class build_ext(_build_ext):
+    def finalize_options(self):
+        _build_ext.finalize_options(self)
 
-try:
-    import scipy
-except ImportError:
-    depsOK = False
-    print "SciPy should be installed first from suitable binaries."
-    print "See http://www.scipy.org/"
+        # Prevent numpy from thinking it is still in its setup process:
+        __builtins__.__NUMPY_SETUP__ = False
+        import numpy
+        self.include_dirs.append(numpy.get_include())
 
-try:
-    import matplotlib
-except ImportError:
-    depsOK = False
-    print "Matplotlib should be installed first from suitable binaries."
-    print "See http://matplotlib.sf.net/"
+        from Cython.Build import cythonize
+        cythonize("imusim/maths/*.pyx")
 
-try:
-    import mayavi
-except ImportError:
-    try:
-        import enthought.mayavi
-    except ImportError:
-        depsOK = False
-        print "Mayavi should be installed first from suitable binaries."
-        print "See http://code.enthought.com/projects/mayavi/"
-
-try:
-    from setuptools import setup, find_packages
-    from setuptools.extension import Extension
-    if depsOK:
-        setup(
-            name = "imusim",
-            version = "0.2",
-            author = "Alex Young and Martin Ling",
-            license = "GPLv3",
-            url = "http://www.imusim.org/",
-            install_requires = ["simpy>=2.3,<3", "pyparsing"],
-            packages = find_packages(),
-            include_dirs = [numpy.get_include()],
-            ext_modules = [
-                Extension("imusim.maths.quaternions",
-                    ['imusim/maths/quaternions.c']),
-                Extension("imusim.maths.quat_splines",
-                    ['imusim/maths/quat_splines.c']),
-                Extension("imusim.maths.vectors",['imusim/maths/vectors.c']),
-                Extension("imusim.maths.natural_neighbour",[
-                    'imusim/maths/natural_neighbour/utils.c',
-                    'imusim/maths/natural_neighbour/delaunay.c',
-                    'imusim/maths/natural_neighbour/natural.c',
-                    'imusim/maths/natural_neighbour.c'])]
-        )
-except ImportError:
-    print "Setuptools must be installed - see http://pypi.python.org/pypi/setuptools"
+setup(
+    name = "imusim",
+    version = "0.2",
+    author = "Alex Young and Martin Ling",
+    license = "GPLv3",
+    url = "http://www.imusim.org/",
+    cmdclass={'build_ext':build_ext},
+    setup_requires = ["numpy", "cython"],
+    install_requires = ["simpy>=2.3,<3", "pyparsing", "numpy", "scipy", "matplotlib", "mayavi"],
+    packages = find_packages(),
+    ext_modules = [
+        Extension("imusim.maths.quaternions",
+            ['imusim/maths/quaternions.c']),
+        Extension("imusim.maths.quat_splines",
+            ['imusim/maths/quat_splines.c']),
+        Extension("imusim.maths.vectors",['imusim/maths/vectors.c']),
+        Extension("imusim.maths.natural_neighbour",[
+            'imusim/maths/natural_neighbour/utils.c',
+            'imusim/maths/natural_neighbour/delaunay.c',
+            'imusim/maths/natural_neighbour/natural.c',
+            'imusim/maths/natural_neighbour.c'])]
+)
